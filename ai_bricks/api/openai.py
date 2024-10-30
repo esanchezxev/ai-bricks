@@ -12,15 +12,16 @@
 
 from multiprocessing.pool import ThreadPool
 import tiktoken
-from openai import OpenAI
-
-client = OpenAI(api_key=key)
 import time
 import os
+from openai import OpenAI
 
 def use_key(key):
-	openai.api_key = key
-if not openai.api_key:
+	global client
+	client = OpenAI(api_key=key)
+
+# Initialize with environment variable if no key provided
+if 'client' not in globals():
 	use_key(os.getenv('OPENAI_KEY', os.getenv('OPENAI_API_KEY', '')))
 
 def model(name, **kwargs):
