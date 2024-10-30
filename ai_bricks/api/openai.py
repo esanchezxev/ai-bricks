@@ -67,8 +67,8 @@ class BaseTextModel(BaseModel):
 
 	def get_usd_cost(self, usage):
 		model = self.config['model']
-		prompt_tokens = usage['prompt_tokens']
-		output_tokens = usage['total_tokens'] - prompt_tokens
+		prompt_tokens = usage.prompt_tokens
+		output_tokens = usage.total_tokens - prompt_tokens
 		prompt_price = {
 			'gpt-4':0.03,
 			'gpt-4-32k':0.06,
@@ -110,7 +110,11 @@ class TextModel(BaseTextModel):
 			out['texts'] = [x['text'] for x in resp.choices]
 		else:
 			out['text']  = resp.choices[0].text
-		out['usage'] = dict(resp.usage)
+		out['usage'] = {
+			'prompt_tokens': resp.usage.prompt_tokens,
+			'completion_tokens': resp.usage.completion_tokens,
+			'total_tokens': resp.usage.total_tokens
+		}
 		self.callbacks_after(out, resp)
 		return out
 
@@ -129,7 +133,11 @@ class TextModel(BaseTextModel):
 		#
 		out['rtt'] = time.time() - t0
 		out['texts'] = [x['text'] for x in resp.choices]
-		out['usage'] = dict(resp.usage)
+		out['usage'] = {
+			'prompt_tokens': resp.usage.prompt_tokens,
+			'completion_tokens': resp.usage.completion_tokens,
+			'total_tokens': resp.usage.total_tokens
+		}
 		self.callbacks_after(out, resp)
 		return out
 
@@ -150,7 +158,11 @@ class TextModel(BaseTextModel):
 		#
 		out['rtt'] = time.time() - t0
 		out['text']  = resp.choices[0].text
-		out['usage'] = dict(resp.usage)
+		out['usage'] = {
+			'prompt_tokens': resp.usage.prompt_tokens,
+			'completion_tokens': resp.usage.completion_tokens,
+			'total_tokens': resp.usage.total_tokens
+		}
 		out['cost'] = self.get_usd_cost(resp.usage)
 		self.callbacks_after(out, resp)
 		return out
@@ -186,7 +198,11 @@ class ChatModel(BaseTextModel):
 			out['texts'] = [start+x['message']['content'] for x in resp.choices]
 		else:
 			out['text'] = start+resp.choices[0].message.content
-		out['usage'] = dict(resp.usage)
+		out['usage'] = {
+			'prompt_tokens': resp.usage.prompt_tokens,
+			'completion_tokens': resp.usage.completion_tokens,
+			'total_tokens': resp.usage.total_tokens
+		}
 		out['cost'] = self.get_usd_cost(resp.usage)
 		self.callbacks_after(out, resp)
 		return out
@@ -232,7 +248,10 @@ class EmbeddingModel(BaseTextModel):
 		#
 		out['rtt'] = time.time() - t0
 		out['vectors'] = [x.embedding for x in resp.data]
-		out['usage']  = dict(resp.usage)
+		out['usage'] = {
+			'prompt_tokens': resp.usage.prompt_tokens,
+			'total_tokens': resp.usage.total_tokens
+		}
 		out['cost'] = self.get_usd_cost(resp.usage)
 		self.callbacks_after(out, resp)
 		return out
