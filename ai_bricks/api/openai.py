@@ -12,10 +12,10 @@
 
 from multiprocessing.pool import ThreadPool
 import tiktoken
-import openai
 import time
 import os
 from openai import OpenAI
+
 def use_key(key):
 	global client
 	client = OpenAI(api_key=key)
