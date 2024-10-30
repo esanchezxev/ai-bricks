@@ -231,7 +231,7 @@ class EmbeddingModel(BaseTextModel):
 		resp = client.embeddings.create(**kwargs)
 		#
 		out['rtt'] = time.time() - t0
-		out['vectors'] = [x['embedding'] for x in resp.data]
+		out['vectors'] = [x.embedding for x in resp.data]
 		out['usage']  = dict(resp.usage)
 		out['cost'] = self.get_usd_cost(resp.usage)
 		self.callbacks_after(out, resp)
