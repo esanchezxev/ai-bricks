@@ -12,9 +12,7 @@
 
 from multiprocessing.pool import ThreadPool
 import tiktoken
-from openai import OpenAI
-
-client = OpenAI(api_key=key)
+import openai
 import time
 import os
 
@@ -63,7 +61,7 @@ class BaseTextModel(BaseModel):
 
 	def token_count(self, text):
 		return len(self.encoder.encode(text))
-
+	
 	def get_usd_cost(self, usage):
 		model = self.config['model']
 		prompt_tokens = usage['prompt_tokens']
@@ -90,7 +88,7 @@ class BaseTextModel(BaseModel):
 
 class TextModel(BaseTextModel):
 	PARAMS = ['model','temperature','top_p','n','stream','stop','presence_penalty','frequency_penalty','logit_bias','user',   'logprobs','echo','best_of']
-
+	
 	def complete(self, prompt, **kw):
 		out = {}
 		#
@@ -102,14 +100,14 @@ class TextModel(BaseTextModel):
 		self.callbacks_before(kwargs)
 		t0 = time.time()
 		#
-		resp = client.completions.create(**kwargs)
+		resp = openai.Completion.create(**kwargs)
 		#
 		out['rtt'] = time.time() - t0
 		if 'n' in kwargs:
-			out['texts'] = [x['text'] for x in resp.choices]
+			out['texts'] = [x['text'] for x in resp['choices']]
 		else:
-			out['text']  = resp.choices[0].text
-		out['usage'] = dict(resp.usage)
+			out['text']  = resp['choices'][0]['text']
+		out['usage'] = dict(resp['usage'])
 		self.callbacks_after(out, resp)
 		return out
 
@@ -124,11 +122,11 @@ class TextModel(BaseTextModel):
 		self.callbacks_before(kwargs)
 		t0 = time.time()
 		#
-		resp = client.completions.create(**kwargs)
+		resp = openai.Completion.create(**kwargs)
 		#
 		out['rtt'] = time.time() - t0
-		out['texts'] = [x['text'] for x in resp.choices]
-		out['usage'] = dict(resp.usage)
+		out['texts'] = [x['text'] for x in resp['choices']]
+		out['usage'] = dict(resp['usage'])
 		self.callbacks_after(out, resp)
 		return out
 
@@ -145,19 +143,19 @@ class TextModel(BaseTextModel):
 		self.callbacks_before(kwargs)
 		t0 = time.time()
 		#
-		resp = client.completions.create(**kwargs)
+		resp = openai.Completion.create(**kwargs)
 		#
 		out['rtt'] = time.time() - t0
-		out['text']  = resp.choices[0].text
-		out['usage'] = dict(resp.usage)
-		out['cost'] = self.get_usd_cost(resp.usage)
+		out['text']  = resp['choices'][0]['text']
+		out['usage'] = dict(resp['usage'])
+		out['cost'] = self.get_usd_cost(resp['usage'])
 		self.callbacks_after(out, resp)
 		return out
 
 
 class ChatModel(BaseTextModel):
 	PARAMS = ['model','temperature','top_p','n','stream','stop','presence_penalty','frequency_penalty','logit_bias','user']
-
+	
 	def complete(self, prompt, **kw):
 		out = {}
 		#
@@ -178,15 +176,15 @@ class ChatModel(BaseTextModel):
 		self.callbacks_before(kwargs)
 		t0 = time.time()
 		#
-		resp = client.chat.completions.create(**kwargs)
+		resp = openai.ChatCompletion.create(**kwargs)
 		#
 		out['rtt'] = time.time() - t0
 		if 'n' in kwargs:
-			out['texts'] = [start+x['message']['content'] for x in resp.choices]
+			out['texts'] = [start+x['message']['content'] for x in resp['choices']]
 		else:
-			out['text'] = start+resp.choices[0].message.content
-		out['usage'] = dict(resp.usage)
-		out['cost'] = self.get_usd_cost(resp.usage)
+			out['text'] = start+resp['choices'][0]['message']['content']
+		out['usage'] = dict(resp['usage'])
+		out['cost'] = self.get_usd_cost(resp['usage'])
 		self.callbacks_after(out, resp)
 		return out
 
@@ -199,18 +197,18 @@ class ChatModel(BaseTextModel):
 		resp_list = pool.map(worker, prompts)
 		out = {'rtt':0, 'cost':0, 'usage':{}, 'texts':[], 'raw':[]}
 		for resp in resp_list:
-			out['rtt'] += resp.rtt
-			out['cost'] += resp.cost
-			for k in resp.usage:
-				out['usage'][k] = out['usage'].get(k,0) + resp.usage[k]
-			out['texts'].append(resp.text)
-			out['raw'].append(resp.raw)
+			out['rtt'] += resp['rtt']
+			out['cost'] += resp['cost']
+			for k in resp['usage']:
+				out['usage'][k] = out['usage'].get(k,0) + resp['usage'][k]
+			out['texts'].append(resp['text'])
+			out['raw'].append(resp['raw'])
 		return out
 
 
 class EmbeddingModel(BaseTextModel):
 	PARAMS = ['model','user']
-
+	
 	def embed(self, text, **kw):
 		out = self.embed_many([text], **kw)
 		out['vector'] = out['vectors'][0]
@@ -227,12 +225,12 @@ class EmbeddingModel(BaseTextModel):
 		self.callbacks_before(kwargs)
 		t0 = time.time()
 		#
-		resp = client.embeddings.create(**kwargs)
+		resp = openai.Embedding.create(**kwargs)
 		#
 		out['rtt'] = time.time() - t0
-		out['vectors'] = [x['embedding'] for x in resp.data]
-		out['usage']  = dict(resp.usage)
-		out['cost'] = self.get_usd_cost(resp.usage)
+		out['vectors'] = [x['embedding'] for x in resp['data']]
+		out['usage']  = dict(resp['usage'])
+		out['cost'] = self.get_usd_cost(resp['usage'])
 		self.callbacks_after(out, resp)
 		return out
 
